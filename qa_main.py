@@ -27,8 +27,6 @@ def parse_args():
     parser.add_argument('--device', type=int, default=0)  # gpuid, <0 means cpu
     parser.add_argument('--batch_size', type=int, default=16)
     # specific ones for csr mode!
-    parser.add_argument('--input_pct', type=str)  # parent-children tab
-    parser.add_argument('--input_topic', type=str)  # topic json input
     parser.add_argument('--csr_query_topic', type=int, default=1)  # query all subtopics under topic?
     parser.add_argument('--csr_ctx_size', type=int, default=8)  # number of sent per chunk?
     parser.add_argument('--csr_ctx_stride', type=int, default=4)  # number of sent between chunks?
@@ -158,8 +156,12 @@ def decode_csr(args, model):
     csr_files = sorted([z for z in os.listdir(args.input_path) if z.endswith('.csr.json')])
     # for fn in tqdm.tqdm(csr_files):
     for fii, fn in enumerate(csr_files):
-        input_path = os.path.join(args.input_path, fn)
-        doc = CsrDoc(input_path)
+        try:
+            input_path = os.path.join(args.input_path, fn)
+            doc = CsrDoc(input_path)
+        except Exception:
+            logging.warning(f'Error trying to open {input_path}, skipping document')
+            continue
         # --
         # process it
         cc = decode_one_csr(doc, args, model)
