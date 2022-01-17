@@ -145,7 +145,7 @@ class TextPiece:
         # --
 
     def __repr__(self):
-        return f"Text({self.orig_text[:100]} ...)"
+        return f"Text({self.orig_text[:100]}" + ('...' if len(self.orig_text)>100 else '') + ')'
 
     # char span to token span
     def cspan2tspan(self, char_start: int, char_length: int):
@@ -297,6 +297,8 @@ class CsrDoc:
         self.claim_events = defaultdict(list)  # sid -> claim events
         self.cand_events = defaultdict(list)  # sid -> other candidate events
         self.cand_entities = defaultdict(list)  # sid -> candidate entities
+        # self.cand_claimers = defaultdict(list)  # sid -> candidate claimers
+        self.cf_frames = []  # cf-frames
         failed_spans = Counter()
         for ff in json_doc['frames']:
             if ff['@type'] in ['entity_evidence', 'event_evidence']:
@@ -313,12 +315,17 @@ class CsrDoc:
                 # --
                 if ff['@type'] == 'entity_evidence':
                     self.cand_entities[_provenance['parent_scope']].append(ff)
+                    # ldc_cat = ff['interp']['info']['ldc_type'].removeprefix('ldcOnt:').split('.')[0] if 'ldc_type' in ff['interp']['info'] else ''
+                    # if ldc_cat in {"PER", "GPE", "ORG", "FAC", "TTL"}:
+                    #     self.cand_claimers[_provenance['parent_scope']].append(ff)
                 else:
                     if ff['interp'].get('info', {}).get('sip', False):
                         self.claim_events[_provenance['parent_scope']].append(ff)
                     else:
                         self.cand_events[_provenance['parent_scope']].append(ff)
                 # --
+            elif ff['@type'] == 'claim_frame_evidence':
+                self.cf_frames.append(ff)
         if len(failed_spans) > 0:
             logging.warning(f"Cannot find head tok_posi for {self.doc_id}: {failed_spans}")
         # --
@@ -326,7 +333,6 @@ class CsrDoc:
         self.id2frame = _id2frame
         self.sents = _sents
         self.id2sent = _id2sent
-        self.cf_frames = []  # cf-frames
         # --
 
     def get_provenance_span(self, ff, try_base=True, try_head=True):
@@ -365,6 +371,8 @@ class CsrDoc:
     def write_output(self, output_path: str):
         with open(output_path, 'w') as fd:
             res = copy.deepcopy(self.orig_doc)
-            res['frames'].extend(self.cf_frames)
+            frames = [ff for ff in res['frames'] if ff['@type'] != 'claim_frame_evidence']
+            frames.extend(self.cf_frames)
+            res['frames'] = frames
             json.dump(res, fd, indent=2, ensure_ascii=False)
         # --
