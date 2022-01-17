@@ -257,7 +257,7 @@ def decode_one_csr(doc, args, model):
         # --
         # put final results
         # first set default value
-        _cf['author'] = _cf['author_score'] = _cf['author_text'] = None
+        _cf['claimer'] = _cf['claimer_score'] = _cf['claimer_text'] = None
         for f_cand in final_cands:
             ff_start, ff_length = doc.get_provenance_span(f_cand)
             # try to find its claiming frame: preferring the smallest ranged one that contains the cand
@@ -270,9 +270,9 @@ def decode_one_csr(doc, args, model):
             # find it?
             cc['cand_finalCE'] += int(best_ce is not None)
             # put it!
-            _cf['author'] = f_cand['@id']
-            _cf['author_score'] = np.average(f_cand['qa_scores']).item()
-            _cf['author_text'] = doc.id2frame[f_cand['@id']]['provenance']['text']
+            _cf['claimer'] = f_cand['@id']
+            _cf['claimer_score'] = np.average(f_cand['qa_scores']).item()
+            _cf['claimer_text'] = doc.id2frame[f_cand['@id']]['provenance']['text']
     # --
     cc.update({'sent': len(doc.sents), 'questions': len(qas)})
     return dict(cc)
