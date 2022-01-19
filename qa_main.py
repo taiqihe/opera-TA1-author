@@ -27,12 +27,8 @@ def parse_args():
     parser.add_argument('--device', type=int, default=0)  # gpuid, <0 means cpu
     parser.add_argument('--batch_size', type=int, default=16)
     # specific ones for csr mode!
-    parser.add_argument('--csr_query_topic', type=int, default=1)  # query all subtopics under topic?
-    parser.add_argument('--csr_ctx_size', type=int, default=8)  # number of sent per chunk?
-    parser.add_argument('--csr_ctx_stride', type=int, default=4)  # number of sent between chunks?
     parser.add_argument('--csr_prob_thresh', type=float, default=0.5)  # >this to be valid!
     parser.add_argument('--csr_cf_sratio', type=float, default=0.5)  # max number (ratio*sent_num) per doc
-    parser.add_argument('--csr_cf_per_sent', type=int, default=1)  # max number of cf per sent
     parser.add_argument('--csr_cf_context', type=int, default=5, help='Max number of sentences to count back for author queries')
     # --
     args = parser.parse_args()
@@ -169,7 +165,7 @@ def decode_csr(args, model):
         # --
         doc.write_output(os.path.join(args.output_path, f"{doc.doc_id}.csr.json"))
     # --
-    logging.info(f"Finishe decoding.")
+    logging.info(f"Finished decoding.")
     # --
 
 def candidate_sort_key(cand):
@@ -240,8 +236,6 @@ def decode_one_csr(doc, args, model):
             # --
             sent_cands = []
             for _one_cand in _cands_sorted:  # go through to check no-overlap!
-                if len(sent_cands) >= args.csr_cf_per_sent:
-                    break
                 _overlap = False
                 _start1, _length1 = doc.get_provenance_span(_one_cand, False, False)  # get full span!
                 for _cand2 in sent_cands:
