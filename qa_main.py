@@ -26,6 +26,7 @@ def parse_args():
     # more
     parser.add_argument('--device', type=int, default=0)  # gpuid, <0 means cpu
     parser.add_argument('--batch_size', type=int, default=16)
+    parser.add_argument('--input_topic', type=str)  # topic json input
     # specific ones for csr mode!
     parser.add_argument('--csr_prob_thresh', type=float, default=0.5)  # >this to be valid!
     parser.add_argument('--csr_cf_sratio', type=float, default=0.5)  # max number (ratio*sent_num) per doc
@@ -177,9 +178,21 @@ def decode_one_csr(doc, args, model):
     cc = defaultdict(int)
     _limit_q, _limit_full = GR.args_max_query_length, GR.args_max_seq_length
 
+    with open(args.input_topic) as fd:
+        d_topic = json.load(fd)
+    subtopics = d_topic['subtopics']
+
     qas = []
     for cf in doc.cf_frames:
-        x_question = re.sub(r'[\w/]*[-]?[xX]', cf['x_text'], cf['subtopic']['template'])
+        if cf['subtopic']['id'] not in subtopics:
+            logging.warning('Claim frame subtobic not found in list, skipping.')
+            cf['claimer'] = cf['claimer_score'] = cf['claimer_text'] = None
+            continue
+        if cf['question_negated']:
+            x_question = subtopics[cf['subtopic']['id']]['seqs']['template_neg']
+        else:
+            x_question = subtopics[cf['subtopic']['id']]['seqs']['template_pos']
+        x_question = x_question.replace('X', cf['x_text'])
         x_question = 'Who said that ' + x_question[0].lower() + x_question[1:] + '?'
         x_question = TextPiece(x_question)
 
